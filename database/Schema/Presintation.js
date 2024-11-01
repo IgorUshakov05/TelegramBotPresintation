@@ -9,7 +9,7 @@ const slideItem = new mongoose.Schema({
     type: String,
   },
 });
-const userSchema = new mongoose.Schema({
+const PresintationSchema = new mongoose.Schema({
   userID: {
     type: String,
     required: true,
@@ -17,11 +17,10 @@ const userSchema = new mongoose.Schema({
   },
   title: {
     type: String,
-    required: true,
   },
   sliders: [slideItem],
 });
 
-const User = mongoose.model("User", userSchema);
+const Presintation = mongoose.model("Presintation", PresintationSchema);
 
-module.exports = User;
+module.exports = Presintation;
