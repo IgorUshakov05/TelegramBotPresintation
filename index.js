@@ -74,7 +74,6 @@ bot.action("remove_presentation", async (ctx) => {
     },
   });
   ctx.session.expecting = await null;
-  await ctx.answerCbQuery();
 });
 bot.on("text", async (ctx) => {
   try {
@@ -134,23 +133,27 @@ bot.on("text", async (ctx) => {
       ctx.session.expecting = null;
       let lastSlideInfo = await getLastSlide(userId);
       console.log(lastSlideInfo);
-      return ctx.replyWithHTML(`Сохранено\n\n<b>${lastSlideInfo.data.title}</b>\n<code>${lastSlideInfo.data.text}</code>`, {
-        reply_markup: {
-          inline_keyboard: [
-            [
-              {
-                text: "🗑️ Удалить презентацию",
-                callback_data: "remove_presentation",
-              },
+      return ctx.replyWithHTML(
+        `Сохранено\n\n<b>${lastSlideInfo.data.title}</b>\n<code>${lastSlideInfo.data.text}</code>`,
+        {
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: "🗑️ Удалить презентацию",
+                  callback_data: "remove_presentation",
+                },
+              ],
+              [{ text: "➕ Добавить слайд", callback_data: "new_slide" }],
+              [{ text: "📥 Скачать", callback_data: "download" }],
             ],
-            [{ text: "➕ Добавить слайд", callback_data: "new_slide" }],
-            [{ text: "📥 Скачать", callback_data: "download" }],
-          ],
-        },
-      });
+          },
+        }
+      );
     }
 
-    ctx.session.expecting = null;
+    ctx.session.expecting = await null;
+    await ctx.answerCbQuery();
   } catch (e) {
     console.log(e);
     await ctx.answerCbQuery(); // Убедитесь, что ответ на callback
