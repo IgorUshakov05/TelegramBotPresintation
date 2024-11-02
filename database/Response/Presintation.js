@@ -75,7 +75,7 @@ let getLastSlide = async (userID) => {
       success: true,
       data: {
         title: `${findSlide.sliders[0].title.slice(0, 30)}...`,
-        text: `${findSlide.sliders[0].text.slice(0, 30)}...`,
+        text: `${findSlide.sliders[0].text.slice(0, 60)}...`,
       },
     };
   } catch (e) {

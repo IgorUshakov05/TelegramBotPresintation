@@ -1,5 +1,5 @@
 require("dotenv").config();
-const { Telegraf, session } = require("telegraf");
+const { Telegraf, session, Markup } = require("telegraf");
 const { mongoose } = require("mongoose");
 const { findUserByIdOrCreate } = require("./database/Response/User");
 const {
@@ -28,7 +28,16 @@ bot.command("start", async (ctx) => {
     const isPremium = ctx.from.is_premium || false;
     const userId = ctx.from.username;
     await findUserByIdOrCreate(userId, firstName, chatID, isPremium);
-    await ctx.reply(`Привет, ${firstName}! 👋`);
+    await ctx.reply(
+      `Привет, ${firstName}! 👋`,
+      Markup.keyboard([
+        ["📥 Скачать"], // первая строка клавиатуры
+        ["🗑️ Удалить презентацию"], // вторая строка клавиатуры
+        ["👁️ Просмотреть"], // вторая строка клавиатуры
+      ])
+        .resize() // подгоняет клавиатуру под размер кнопок
+        .oneTime()
+    );
     await ctx.reply(`Бот на стадии разработки! Пошли вон`, {
       reply_markup: {
         inline_keyboard: [
@@ -59,7 +68,7 @@ bot.action("set_text_slide", (ctx) => {
   ctx.answerCbQuery();
 });
 
-bot.action("remove_presentation", async (ctx) => {
+bot.hears("🗑️ Удалить презентацию", async (ctx) => {
   const userId = await ctx.from.username;
   let remove_presentation = await removePresentation(userId);
   if (!remove_presentation.success) {
@@ -97,7 +106,10 @@ bot.on("text", async (ctx) => {
         reply_markup: {
           inline_keyboard: [
             [
-              { text: "◀️ Назад", callback_data: "get_title_pricentation" },
+              {
+                text: "◀️ Изменить название",
+                callback_data: "get_title_pricentation",
+              },
               { text: "➕ Добавить слайд", callback_data: "new_slide" },
             ],
           ],
@@ -110,17 +122,11 @@ bot.on("text", async (ctx) => {
         return ctx.reply("Сейчас чуть-чуть не пон, перезапусти меня /start");
       }
       ctx.session.expecting = null;
-      return ctx.reply("Название слайда сохранено!", {
+      return ctx.reply("✅ Название слайда сохранено!", {
         reply_markup: {
           inline_keyboard: [
-            [
-              {
-                text: "🗑️ Удалить презентацию",
-                callback_data: "remove_presentation",
-              },
-            ],
             [{ text: "📜 Текст презинтации", callback_data: "set_text_slide" }],
-            [{ text: "📥 Скачать", callback_data: "download" }],
+            [{ text: "🚮 Удалить слайд", callback_data: "removeSlide" }]
           ],
         },
       });
@@ -133,19 +139,13 @@ bot.on("text", async (ctx) => {
       ctx.session.expecting = null;
       let lastSlideInfo = await getLastSlide(userId);
       console.log(lastSlideInfo);
-      return ctx.replyWithHTML(
-        `Сохранено\n\n<b>${lastSlideInfo.data.title}</b>\n<code>${lastSlideInfo.data.text}</code>`,
+      return await ctx.replyWithHTML(
+        `✅ Сохранено\n<b>${lastSlideInfo.data.title}</b>\n<code>${lastSlideInfo.data.text}</code>`,
         {
           reply_markup: {
             inline_keyboard: [
-              [
-                {
-                  text: "🗑️ Удалить презентацию",
-                  callback_data: "remove_presentation",
-                },
-              ],
               [{ text: "➕ Добавить слайд", callback_data: "new_slide" }],
-              [{ text: "📥 Скачать", callback_data: "download" }],
+              [{ text: "🚮 Удалить последний слайд", callback_data: "removeSlide" }],
             ],
           },
         }
