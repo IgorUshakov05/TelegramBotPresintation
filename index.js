@@ -1,12 +1,16 @@
 require("dotenv").config();
 const { Telegraf, session, Markup } = require("telegraf");
 const { mongoose } = require("mongoose");
+const fs = require("fs");
+const axios = require("axios");
 const { findUserByIdOrCreate } = require("./database/Response/User");
 const {
   setTitle,
   setTitleSlide,
+  setBackgroundSlide,
   setTextSlide,
   removePresentation,
+  removeLastSlide,
   getLastSlide,
 } = require("./database/Response/Presintation");
 
@@ -62,9 +66,44 @@ bot.action("new_slide", (ctx) => {
   ctx.answerCbQuery();
 });
 
+bot.action("removeSlide", async (ctx) => {
+  let userID = ctx.from.username;
+  let removeSlide = await removeLastSlide(userID);
+  if (!removeSlide.success) {
+    ctx.reply("Слайдов больше нет!");
+  } else {
+    await ctx.reply("Последний слайд удален", {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: "➕ Добавить слайд", callback_data: "new_slide" }],
+        ],
+      },
+    });
+  }
+  ctx.session.expecting = "remove_slide";
+  await ctx.answerCbQuery();
+});
+
 bot.action("set_text_slide", (ctx) => {
   ctx.reply("Введите текст слайда");
   ctx.session.expecting = "slideText";
+  ctx.answerCbQuery();
+});
+bot.action("set_background_slide", (ctx) => {
+  ctx.replyWithHTML("🖼️ Отправте фон слайда <i>(необязательно)</i>", {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: "➕ Добавить слайд", callback_data: "new_slide" }],
+        [
+          {
+            text: "🚮 Удалить последний слайд",
+            callback_data: "removeSlide",
+          },
+        ],
+      ],
+    },
+  });
+  ctx.session.expecting = "slideBackground";
   ctx.answerCbQuery();
 });
 
@@ -125,8 +164,14 @@ bot.on("text", async (ctx) => {
       return ctx.reply("✅ Название слайда сохранено!", {
         reply_markup: {
           inline_keyboard: [
-            [{ text: "📜 Текст презинтации", callback_data: "set_text_slide" }],
-            [{ text: "🚮 Удалить слайд", callback_data: "removeSlide" }]
+            [{ text: "⏭️ Продолжить", callback_data: "set_text_slide" }],
+            [
+              {
+                text: "🔄 Изменить заголовок",
+                callback_data: "reset_text_slide",
+              },
+            ],
+            [{ text: "🚮 Удалить слайд", callback_data: "removeSlide" }],
           ],
         },
       });
@@ -137,27 +182,118 @@ bot.on("text", async (ctx) => {
         return ctx.reply("Сейчас чуть-чуть не пон, перезапусти меня /start");
       }
       ctx.session.expecting = null;
+
+      return await ctx.replyWithHTML(`✅ Текст слайда сохранен!`, {
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "⏭️ Продолжить",
+                callback_data: "set_background_slide",
+              },
+            ],
+            [
+              {
+                text: "🔄 Изменить текст",
+                callback_data: "reset_text_slide",
+              },
+            ],
+            [{ text: "🚮 Удалить слайд", callback_data: "removeSlide" }],
+          ],
+        },
+      });
+    }
+  } catch (e) {
+    console.log(e);
+    return ctx.reply("Я сломался, напиши @O101O1O1O");
+  }
+});
+bot.on("photo", async (ctx) => {
+  try {
+    const userId = ctx.from.username;
+    let type = ctx.session.expecting;
+    console.log(type);
+    if (!type) {
+      ctx.session.expecting = null;
+      return ctx.reply("Сейчас чуть-чуть не пон, перезапусти меня /start");
+    }
+
+    let text = ctx.message.text;
+    if (type === "slideBackground") {
+      // Получаем информацию о фотографиях
+      const photos = ctx.message.photo;
+      const fileId = photos[photos.length - 1].file_id;
+      let saveTitle = await setBackgroundSlide(userId, fileId);
+      if (!saveTitle || !saveTitle.success) {
+        ctx.session.expecting = null;
+        return ctx.reply("Сейчас чуть-чуть не пон, перезапусти меня /start");
+      }
+      // Получаем URL файла
+      const fileUrl = await ctx.telegram.getFileLink(fileId);
+
+      // Загружаем изображение с помощью axios
+      const response = await axios.get(fileUrl.href, {
+        responseType: "arraybuffer",
+      });
+      const buffer = Buffer.from(response.data, "binary");
+
+      // Сохраняем изображение
+      await fs.writeFileSync(`./pictures/${fileId}.jpg`, buffer);
+      ctx.session.expecting = null;
       let lastSlideInfo = await getLastSlide(userId);
       console.log(lastSlideInfo);
-      return await ctx.replyWithHTML(
+      if (lastSlideInfo.data.background) {
+        return ctx.replyWithPhoto(
+          { url: fileUrl },
+          {
+            caption: `✅ Сохранено\n<b>${lastSlideInfo.data.title}</b>\n<code>${lastSlideInfo.data.text}</code>`,
+            parse_mode: "HTML", // Чтобы работали теги <b> и <code>
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: "➕ Добавить слайд", callback_data: "new_slide" }],
+                [
+                  {
+                    text: "🔄 Изменить фон слайда",
+                    callback_data: "reset_background_slide",
+                  },
+                ],
+                [
+                  {
+                    text: "🚮 Удалить последний слайд",
+                    callback_data: "removeSlide",
+                  },
+                ],
+              ],
+            },
+          }
+        );
+      }
+      ctx.replyWithHTML(
         `✅ Сохранено\n<b>${lastSlideInfo.data.title}</b>\n<code>${lastSlideInfo.data.text}</code>`,
         {
           reply_markup: {
             inline_keyboard: [
               [{ text: "➕ Добавить слайд", callback_data: "new_slide" }],
-              [{ text: "🚮 Удалить последний слайд", callback_data: "removeSlide" }],
+              [
+                {
+                  text: "🔄 Изменить фон слайда",
+                  callback_data: "set_background_slide",
+                },
+              ],
+              [
+                {
+                  text: "🚮 Удалить последний слайд",
+                  callback_data: "removeSlide",
+                },
+              ],
             ],
           },
         }
       );
     }
-
-    ctx.session.expecting = await null;
-    await ctx.answerCbQuery();
-  } catch (e) {
-    console.log(e);
-    await ctx.answerCbQuery(); // Убедитесь, что ответ на callback
-    return ctx.reply("Я сломался, напиши @O101O1O1O");
+  } catch (error) {
+    console.error("Ошибка при получении изображения:", error);
+    await ctx.reply("Произошла ошибка при обработке изображения.");
   }
 });
 

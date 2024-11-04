@@ -5,6 +5,9 @@ const slideItem = new mongoose.Schema({
     type: String,
     require: false,
   },
+  background: {
+    type: String
+  },
   text: {
     type: String,
   },

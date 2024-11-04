@@ -13,6 +13,19 @@ let setTitle = async (userID, text) => {
     return { success: false };
   }
 };
+let removeLastSlide = async (userID) => {
+  try {
+    const result = await PresentationSchema.findOneAndUpdate(
+      { userID }, // Условие поиска по userID
+      { $pop: { sliders: 1 } }, // Операция удаления последнего элемента из массива
+      { new: true } // Опция возвращения обновленного документа
+    );
+    return { success: !!result.sliders.length };
+  } catch (e) {
+    console.log(e);
+    return { success: false };
+  }
+};
 let setTitleSlide = async (userID, text) => {
   try {
     // Используйте $set для обновления поля title
@@ -29,6 +42,29 @@ let setTitleSlide = async (userID, text) => {
   }
 };
 
+let setBackgroundSlide = async (userID, background) => {
+  try {
+    let setText = await PresentationSchema.updateOne(
+      { userID },
+      { $set: { "sliders.$[lastUnfilled].background": background } },
+      {
+        arrayFilters: [
+          {
+            "lastUnfilled.title": { $exists: true },
+            "lastUnfilled.background": { $exists: false },
+          },
+        ],
+        sort: { "sliders._id": -1 },
+      }
+    );
+
+    console.log(setText);
+    return { success: setText.modifiedCount > 0 };
+  } catch (e) {
+    console.log(e);
+    return { success: false };
+  }
+};
 let setTextSlide = async (userID, text) => {
   try {
     let setText = await PresentationSchema.updateOne(
@@ -76,6 +112,7 @@ let getLastSlide = async (userID) => {
       data: {
         title: `${findSlide.sliders[0].title.slice(0, 30)}...`,
         text: `${findSlide.sliders[0].text.slice(0, 60)}...`,
+        background: findSlide.sliders[0].background?findSlide.sliders[0].background:null
       },
     };
   } catch (e) {
@@ -85,7 +122,9 @@ let getLastSlide = async (userID) => {
 module.exports = {
   setTitle,
   setTitleSlide,
-  setTextSlide,
+  removeLastSlide,
+  setBackgroundSlide,
   removePresentation,
+  setTextSlide,
   getLastSlide,
 };
