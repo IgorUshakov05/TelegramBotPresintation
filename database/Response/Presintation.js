@@ -23,7 +23,7 @@ let removeLastSlide = async (userID) => {
     return { success: !!result.sliders.length };
   } catch (e) {
     console.log(e);
-    return { success: false };
+    return { success: false, message:'Ошибка при удалении!' };
   }
 };
 let setTitleSlide = async (userID, text) => {
@@ -41,6 +41,104 @@ let setTitleSlide = async (userID, text) => {
     return { success: false };
   }
 };
+
+
+async function updateLastSlideTitle(userID, newTitle) {
+  try {
+    const presintation = await PresentationSchema.findOne({ userID });
+
+    if (!presintation) {
+      console.log("Презентация не найдена");
+      return { success: false, message: "Презентация не найдена" };
+    }
+
+    // Проверяем, есть ли слайды в массиве `sliders`
+    if (presintation.sliders.length > 0) {
+      // Находим последний слайд и обновляем его title
+      const lastSlideIndex = presintation.sliders.length - 1;
+      presintation.sliders[lastSlideIndex].title = newTitle;
+
+      // Сохраняем обновленный документ
+      await presintation.save();
+
+      console.log(
+        "Title последнего слайда обновлен:",
+        presintation.sliders[lastSlideIndex]
+      );
+      return { success: true };
+    } else {
+      console.log("Нет слайдов для обновления");
+      return { success: false, message: "Нет слайдов для изменения" };
+    }
+  } catch (error) {
+    console.error("Ошибка при обновлении title последнего слайда:", error);
+    return { success: false, message: "Нет слайдов для изменения" };
+  }
+}
+
+
+
+async function removeBackgroundLastSlide(userID) {
+  try {
+    const presintation = await PresentationSchema.findOne({ userID });
+
+    if (!presintation) {
+      console.log("Презентация не найдена");
+      return { success: false, message: "Презентация не найдена" };
+    }
+
+    // Проверяем, есть ли слайды в массиве `sliders`
+    if (presintation.sliders.length > 0) {
+      // Находим последний слайд и обновляем его title
+      const lastSlideIndex = presintation.sliders.length - 1;
+      presintation.sliders[lastSlideIndex].background = null;
+
+      // Сохраняем обновленный документ
+      await presintation.save();
+      return { success: true };
+    } else {
+      return { success: false, message: "Нет фона для удаления" };
+    }
+  } catch (error) {
+    console.error("Ошибка при обновлении title последнего слайда:", error);
+    return { success: false, message: "Нет фона для удаления" };
+  }
+}
+
+
+
+async function updateLastSlideText(userID, newText) {
+  try {
+    const presintation = await PresentationSchema.findOne({ userID });
+
+    if (!presintation) {
+      console.log("Презентация не найдена");
+      return { success: false, message: "Презентация не найдена" };
+    }
+
+    // Проверяем, есть ли слайды в массиве `sliders`
+    if (presintation.sliders.length > 0) {
+      // Находим последний слайд и обновляем его title
+      const lastSlideIndex = presintation.sliders.length - 1;
+      presintation.sliders[lastSlideIndex].text = newText;
+
+      // Сохраняем обновленный документ
+      await presintation.save();
+
+      console.log(
+        "Title последнего слайда обновлен:",
+        presintation.sliders[lastSlideIndex]
+      );
+      return { success: true };
+    } else {
+      console.log("Нет слайдов для обновления");
+      return { success: false, message: "Нет слайдов для изменения" };
+    }
+  } catch (error) {
+    console.error("Ошибка при обновлении title последнего слайда:", error);
+    return { success: false, message: "Нет слайдов для изменения" };
+  }
+}
 
 let setBackgroundSlide = async (userID, background) => {
   try {
@@ -112,7 +210,9 @@ let getLastSlide = async (userID) => {
       data: {
         title: `${findSlide.sliders[0].title.slice(0, 30)}...`,
         text: `${findSlide.sliders[0].text.slice(0, 60)}...`,
-        background: findSlide.sliders[0].background?findSlide.sliders[0].background:null
+        background: findSlide.sliders[0].background
+          ? findSlide.sliders[0].background
+          : null,
       },
     };
   } catch (e) {
@@ -123,8 +223,11 @@ module.exports = {
   setTitle,
   setTitleSlide,
   removeLastSlide,
+  updateLastSlideText,
   setBackgroundSlide,
+  removeBackgroundLastSlide,
   removePresentation,
+  updateLastSlideTitle,
   setTextSlide,
   getLastSlide,
 };

@@ -8,7 +8,10 @@ const {
   setTitle,
   setTitleSlide,
   setBackgroundSlide,
+  updateLastSlideText,
   setTextSlide,
+  removeBackgroundLastSlide,
+  updateLastSlideTitle,
   removePresentation,
   removeLastSlide,
   getLastSlide,
@@ -84,9 +87,39 @@ bot.action("removeSlide", async (ctx) => {
   await ctx.answerCbQuery();
 });
 
+bot.action("remove_background_slide", async (ctx) => {
+  let userID = ctx.from.username;
+  let removeSlide = await removeBackgroundLastSlide(userID);
+  if (!removeSlide.success) {
+    ctx.reply(removeSlide.message);
+  } else {
+    await ctx.reply("Фон слайда успешно удален!", {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: "➕ Добавить слайд", callback_data: "new_slide" }],
+        ],
+      },
+    });
+  }
+  ctx.session.expecting = "slideBackground";
+  await ctx.answerCbQuery();
+});
+
 bot.action("set_text_slide", (ctx) => {
   ctx.reply("Введите текст слайда");
   ctx.session.expecting = "slideText";
+  ctx.answerCbQuery();
+});
+
+bot.action("reset_title_slide", (ctx) => {
+  ctx.reply("Введите название слайда");
+  ctx.session.expecting = "slideResetTitle";
+  ctx.answerCbQuery();
+});
+
+bot.action("reset_text_slide", (ctx) => {
+  ctx.reply("Введите текст слайда");
+  ctx.session.expecting = "slideResetText";
   ctx.answerCbQuery();
 });
 bot.action("set_background_slide", (ctx) => {
@@ -104,6 +137,26 @@ bot.action("set_background_slide", (ctx) => {
     },
   });
   ctx.session.expecting = "slideBackground";
+  ctx.answerCbQuery();
+});
+
+bot.action("reset_background_slide", (ctx) => {
+  ctx.replyWithHTML("🖼️ Отправте фон слайда <i>(необязательно)</i>", {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: "➕ Добавить слайд", callback_data: "new_slide" }],
+
+        [{ text: "🚮 Удалить фон", callback_data: "remove_background_slide" }],
+        [
+          {
+            text: "🚮 Удалить последний слайд",
+            callback_data: "removeSlide",
+          },
+        ],
+      ],
+    },
+  });
+  ctx.session.expecting = "reset_background_slide";
   ctx.answerCbQuery();
 });
 
@@ -154,6 +207,60 @@ bot.on("text", async (ctx) => {
           ],
         },
       });
+    } else if (type === "slideResetTitle") {
+      let saveTitle = await updateLastSlideTitle(userId, text);
+      if (!saveTitle || !saveTitle.success) {
+        ctx.session.expecting = null;
+        return ctx.reply("❌ Нет слайдов для обновления!", {
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: "➕ Добавить слайд", callback_data: "new_slide" }],
+            ],
+          },
+        });
+      }
+      ctx.session.expecting = null;
+      return ctx.reply("✅ Название слайда изменено!", {
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "⏭️ Продолжить", callback_data: "set_text_slide" }],
+            [
+              {
+                text: "🔄 Изменить заголовок",
+                callback_data: "reset_title_slide",
+              },
+            ],
+            [{ text: "🚮 Удалить слайд", callback_data: "removeSlide" }],
+          ],
+        },
+      });
+    } else if (type === "slideResetText") {
+      let saveTitle = await updateLastSlideText(userId, text);
+      if (!saveTitle || !saveTitle.success) {
+        ctx.session.expecting = null;
+        return ctx.reply("❌ Нет слайдов для обновления!", {
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: "➕ Добавить слайд", callback_data: "new_slide" }],
+            ],
+          },
+        });
+      }
+      ctx.session.expecting = null;
+      return ctx.reply("✅ Текст слайда изменен!", {
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "⏭️ Продолжить", callback_data: "set_background_slide" }],
+            [
+              {
+                text: "🔄 Изменить текст",
+                callback_data: "reset_text_slide",
+              },
+            ],
+            [{ text: "🚮 Удалить слайд", callback_data: "removeSlide" }],
+          ],
+        },
+      });
     } else if (type === "slideTitle") {
       let saveTitle = await setTitleSlide(userId, text);
       if (!saveTitle || !saveTitle.success) {
@@ -168,7 +275,7 @@ bot.on("text", async (ctx) => {
             [
               {
                 text: "🔄 Изменить заголовок",
-                callback_data: "reset_text_slide",
+                callback_data: "reset_title_slide",
               },
             ],
             [{ text: "🚮 Удалить слайд", callback_data: "removeSlide" }],
