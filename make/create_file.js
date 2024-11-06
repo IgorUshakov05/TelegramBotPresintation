@@ -108,14 +108,11 @@ function createPresentation(slidesData, thema = 0) {
     if (slide.image) {
       slideItem.addImage({
         path: path.join(__dirname, "..", "pictures", slide.image), // Путь к изображению
-        x: '50%',  // Размещаем изображение по горизонтали
-        y: '50%',  // Размещаем изображение по вертикали (по центру)
-        w: '50%',  // Ширина изображения (например, 50% от ширины слайда)
-        h: 'auto', // Автоматическая высота для сохранения пропорций изображения
-        align: 'center', // Центрируем по горизонтали
-        valign: 'middle' // Центрируем по вертикали
+        x: "50%",
+        y: "50%",
+        w: "42%",
+        sizing: "contain", // Сохраняет пропорции
       });
-      // Добавляем текст
       slideItem.addText(slide.title, {
         x: 1,
         y: 1,
@@ -181,7 +178,7 @@ const slidesData = {
     },
     {
       title: "Онлайн-курсы и платформы для самообучения",
-      image: `AgACAgIAAxkBAAII1Gcqrv5SI7tVQjb73Y5nkArSkZPIAALj6TEbdJ9QSXRQ4duSJvl_AQADAgADeQADNgQ.jpg`,
+      image: `logo.jpg`,
       background: `AgACAgIAAxkBAAII1Gcqrv5SI7tVQjb73Y5nkArSkZPIAALj6TEbdJ9QSXRQ4duSJvl_AQADAgADeQADNgQ.jpg`,
       text: "Онлайн-курсы стали неотъемлемой частью образования. Платформы, такие как Coursera, Udacity и Khan Academy, предлагают широкий выбор курсов, доступных в любое время и подходящих для студентов с разными уровнями подготовки. Они позволяют студентам учиться в своем темпе, улучшать навыки и получать новые знания.",
     },
