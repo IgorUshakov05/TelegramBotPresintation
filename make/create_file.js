@@ -108,10 +108,11 @@ function createPresentation(slidesData, thema = 0) {
     if (slide.image) {
       slideItem.addImage({
         path: path.join(__dirname, "..", "pictures", slide.image), // Путь к изображению
-        x: "50%",
-        y: "50%",
-        w: "42%",
-        sizing: "contain", // Сохраняет пропорции
+        x: "60%",
+        y: "25%",
+        w: 2.5,
+        h: 2.5,
+        align: "right",
       });
       slideItem.addText(slide.title, {
         x: 1,
