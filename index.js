@@ -3,6 +3,7 @@ const { Telegraf, session, Markup } = require("telegraf");
 const { mongoose } = require("mongoose");
 const fs = require("fs");
 const axios = require("axios");
+const sharp = require("sharp");
 const { findUserByIdOrCreate } = require("./database/Response/User");
 const {
   setTitle,
@@ -326,7 +327,7 @@ bot.on("photo", async (ctx) => {
     }
 
     let text = ctx.message.text;
-    if (type === "slideBackground") {
+    if (type === "slideBackground" || type === "reset_background_slide") {
       // Получаем информацию о фотографиях
       const photos = ctx.message.photo;
       const fileId = photos[photos.length - 1].file_id;
@@ -345,6 +346,7 @@ bot.on("photo", async (ctx) => {
       const buffer = Buffer.from(response.data, "binary");
 
       // Сохраняем изображение
+
       await fs.writeFileSync(`./pictures/${fileId}.jpg`, buffer);
       ctx.session.expecting = null;
       let lastSlideInfo = await getLastSlide(userId);
