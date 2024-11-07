@@ -216,7 +216,18 @@ let getLastSlide = async (userID) => {
     return { success: false };
   }
 };
-
+let setCountDownLoad = async (userID) => {
+  try {
+    let count = await PresentationSchema.findOneAndUpdate(
+      { userID },
+      { $inc: { countDownLoad: 1 } }
+    );
+    return { success: true, count };
+  } catch (e) {
+    console.error("Ошибка: ", e);
+    return { success: false, message: e };
+  }
+};
 let seeSLides = async (userID) => {
   try {
     let getSlides = await PresentationSchema.findOne({ userID });
@@ -229,6 +240,7 @@ let seeSLides = async (userID) => {
 module.exports = {
   setTitle,
   setTitleSlide,
+  setCountDownLoad,
   removeLastSlide,
   updateLastSlideText,
   setBackgroundSlide,

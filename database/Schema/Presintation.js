@@ -18,6 +18,10 @@ const PresintationSchema = new mongoose.Schema({
     required: true,
     unique: true,
   },
+  countDownLoad: {
+    type: Number,
+    default: 0
+  },
   title: {
     type: String,
   },

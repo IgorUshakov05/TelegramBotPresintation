@@ -3,7 +3,6 @@ const { Telegraf, session, Markup } = require("telegraf");
 const { mongoose } = require("mongoose");
 const fs = require("fs");
 const axios = require("axios");
-const sharp = require("sharp");
 const { findUserByIdOrCreate } = require("./database/Response/User");
 const {
   setTitle,
@@ -17,8 +16,9 @@ const {
   removePresentation,
   removeLastSlide,
   getLastSlide,
+  setCountDownLoad,
 } = require("./database/Response/Presintation");
-
+const { createPresentation } = require("./make/create_file");
 const bot = new Telegraf(process.env.BOT_TOKEN);
 bot.use(session());
 
@@ -106,6 +106,32 @@ bot.action("remove_background_slide", async (ctx) => {
   ctx.session.expecting = "slideBackground";
   await ctx.answerCbQuery();
 });
+let themes = [
+  {
+    name: "Blue",
+  },
+  {
+    name: "Turquoise",
+  },
+  {
+    name: "Red",
+  },
+  {
+    name: "Orange",
+  },
+  {
+    name: "Green",
+  },
+  {
+    name: "Purple",
+  },
+  {
+    name: "Yellow",
+  },
+  {
+    name: "Light_Green",
+  },
+];
 
 bot.action("set_text_slide", (ctx) => {
   ctx.reply("Введите текст слайда");
@@ -161,7 +187,32 @@ bot.action("reset_background_slide", (ctx) => {
   ctx.session.expecting = "reset_background_slide";
   ctx.answerCbQuery();
 });
-
+bot.on("callback_query", async (ctx) => {
+  const callbackData = ctx.callbackQuery.data;
+  const userId = await ctx.from.username;
+  await ctx.answerCbQuery(`Вы выбрали тему: ${callbackData}`);
+  console.log(callbackData - 1);
+  let getPresintation = await seeSLides(userId);
+  if (!getPresintation.success)
+    return ctx.reply("❌ Возникла ошибка при получении презентации :(");
+  await ctx.reply("⚙️ Генерация...");
+  let createPresentationOfUser = await createPresentation(
+    getPresintation.presintation,
+    Number(callbackData) - 1,
+    userId
+  );
+  if (!createPresentationOfUser.success) return ctx.reply("❌ Ошибка!");
+  let countDown = await setCountDownLoad(userId);
+  let result = 10 - countDown.count.countDownLoad;
+  if(result <= 0) return ctx.reply("Загрузки закончились :(")
+  await ctx.replyWithHTML(
+    `📩 Отправка, не забудте поблагодарить <a href='https://t.me/O101O1O1O'>создателя!</a>\n<b>Осталось ${result} скачиваний</b>`
+  );
+  await ctx.sendDocument({
+    source: `./storage/${userId}.pptx`,
+  });
+  return;
+});
 bot.hears("🗑️ Удалить презентацию", async (ctx) => {
   const userId = await ctx.from.username;
   let remove_presentation = await removePresentation(userId);
@@ -183,7 +234,61 @@ bot.on("text", async (ctx) => {
     const userId = ctx.from.username;
     let type = ctx.session.expecting;
     if (ctx.message.text === "📥 Скачать") {
-      return ctx.reply("Презентация отправлена!");
+      let media = [];
+      themes.forEach((thema) => {
+        media.push({
+          type: "photo",
+          media: { source: `./icons/${thema.name}.png` },
+        });
+      });
+      await ctx.replyWithMediaGroup(media);
+      await ctx.reply("Выберите тему:", {
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "1",
+                callback_data: "1",
+              },
+              {
+                text: "2",
+                callback_data: "2",
+              },
+            ],
+            [
+              {
+                text: "3",
+                callback_data: "3",
+              },
+              {
+                text: "4",
+                callback_data: "4",
+              },
+            ],
+            [
+              {
+                text: "5",
+                callback_data: "5",
+              },
+              {
+                text: "6",
+                callback_data: "6",
+              },
+            ],
+            [
+              {
+                text: "7",
+                callback_data: "7",
+              },
+              {
+                text: "8",
+                callback_data: "8",
+              },
+            ],
+          ],
+        },
+      });
+      return;
     } else if (ctx.message.text === "🗑️ Удалить презентацию") {
       return ctx.reply("Презентация удалена!");
     } else if (ctx.message.text === "👁️ Просмотреть") {
