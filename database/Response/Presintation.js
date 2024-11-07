@@ -1,3 +1,4 @@
+const Presintation = require("../Schema/Presintation");
 const PresentationSchema = require("../Schema/Presintation");
 
 let setTitle = async (userID, text) => {
@@ -23,7 +24,7 @@ let removeLastSlide = async (userID) => {
     return { success: !!result.sliders.length };
   } catch (e) {
     console.log(e);
-    return { success: false, message:'Ошибка при удалении!' };
+    return { success: false, message: "Ошибка при удалении!" };
   }
 };
 let setTitleSlide = async (userID, text) => {
@@ -41,7 +42,6 @@ let setTitleSlide = async (userID, text) => {
     return { success: false };
   }
 };
-
 
 async function updateLastSlideTitle(userID, newTitle) {
   try {
@@ -76,8 +76,6 @@ async function updateLastSlideTitle(userID, newTitle) {
   }
 }
 
-
-
 async function removeBackgroundLastSlide(userID) {
   try {
     const presintation = await PresentationSchema.findOne({ userID });
@@ -104,8 +102,6 @@ async function removeBackgroundLastSlide(userID) {
     return { success: false, message: "Нет фона для удаления" };
   }
 }
-
-
 
 async function updateLastSlideText(userID, newText) {
   try {
@@ -142,27 +138,28 @@ async function updateLastSlideText(userID, newText) {
 
 let setBackgroundSlide = async (userID, background) => {
   try {
-    let setText = await PresentationSchema.updateOne(
-      { userID },
-      { $set: { "sliders.$[lastUnfilled].background": background } },
-      {
-        arrayFilters: [
-          {
-            "lastUnfilled.title": { $exists: true },
-            "lastUnfilled.background": { $exists: false },
-          },
-        ],
-        sort: { "sliders._id": -1 },
-      }
-    );
+    // Находим документ с данным userID
+    const presentation = await PresentationSchema.findOne({ userID: userID });
 
-    console.log(setText);
-    return { success: setText.modifiedCount > 0 };
+    if (!presentation || presentation.sliders.length === 0) {
+      // Если документ или слайды не найдены
+      return { success: false, message: "Document or slides not found" };
+    }
+
+    // Определяем индекс последнего слайда
+    const lastIndex = presentation.sliders.length - 1;
+
+    // Обновляем background последнего слайда
+    presentation.sliders[lastIndex].background = background;
+    await presentation.save();
+
+    return { success: true };
   } catch (e) {
-    console.log(e);
+    console.error(e);
     return { success: false };
   }
 };
+
 let setTextSlide = async (userID, text) => {
   try {
     let setText = await PresentationSchema.updateOne(
@@ -219,12 +216,23 @@ let getLastSlide = async (userID) => {
     return { success: false };
   }
 };
+
+let seeSLides = async (userID) => {
+  try {
+    let getSlides = await PresentationSchema.findOne({ userID });
+    return { success: true, presintation: getSlides };
+  } catch (e) {
+    console.error("Ошибка: ", e);
+    return { success: false, message: e };
+  }
+};
 module.exports = {
   setTitle,
   setTitleSlide,
   removeLastSlide,
   updateLastSlideText,
   setBackgroundSlide,
+  seeSLides,
   removeBackgroundLastSlide,
   removePresentation,
   updateLastSlideTitle,

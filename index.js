@@ -10,6 +10,7 @@ const {
   setTitleSlide,
   setBackgroundSlide,
   updateLastSlideText,
+  seeSLides,
   setTextSlide,
   removeBackgroundLastSlide,
   updateLastSlideTitle,
@@ -41,7 +42,7 @@ bot.command("start", async (ctx) => {
       Markup.keyboard([
         ["📥 Скачать"], // первая строка клавиатуры
         ["🗑️ Удалить презентацию"], // вторая строка клавиатуры
-        ["👁️ Просмотреть"], // вторая строка клавиатуры
+        ["👁️ Просмотреть"],
       ])
         .resize() // подгоняет клавиатуру под размер кнопок
         .oneTime()
@@ -181,6 +182,43 @@ bot.on("text", async (ctx) => {
   try {
     const userId = ctx.from.username;
     let type = ctx.session.expecting;
+    if (ctx.message.text === "📥 Скачать") {
+      return ctx.reply("Презентация отправлена!");
+    } else if (ctx.message.text === "🗑️ Удалить презентацию") {
+      return ctx.reply("Презентация удалена!");
+    } else if (ctx.message.text === "👁️ Просмотреть") {
+      let getPresintation = await seeSLides(userId);
+      if (!getPresintation.success)
+        return ctx.reply("❌ Возникла ошибка при получении презентации :(");
+      if (!getPresintation.presintation.sliders.length)
+        return ctx.reply("Презентация пустая!");
+
+      await ctx.replyWithHTML(
+        `Название: <b>${getPresintation.presintation.title}</b>`
+      );
+
+      for (const slide of getPresintation.presintation.sliders) {
+        console.log(slide.background);
+        if (slide.background) {
+          await ctx.replyWithPhoto(
+            { source: `./pictures/${slide.background}.jpg` },
+            {
+              caption: `<b>${slide.title || "Заголовок не задан"}</b>\n<i>${
+                slide.text || "Текст не задан"
+              }</i>`,
+              parse_mode: "HTML", // Используем HTML, а не Markdown
+            }
+          );
+        } else {
+          await ctx.replyWithHTML(
+            `<b>${slide.title || "Заголовок не задан"}</b>\n<i>${
+              slide.text || "Текст не задан"
+            }</i>`
+          );
+        }
+      }
+      return;
+    }
     console.log(type);
     if (!type) {
       ctx.session.expecting = null;
@@ -338,7 +376,7 @@ bot.on("photo", async (ctx) => {
       }
       // Получаем URL файла
       const fileUrl = await ctx.telegram.getFileLink(fileId);
-
+      console.log(fileUrl);
       // Загружаем изображение с помощью axios
       const response = await axios.get(fileUrl.href, {
         responseType: "arraybuffer",
