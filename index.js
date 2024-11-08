@@ -13,6 +13,7 @@ const {
   setTextSlide,
   removeBackgroundLastSlide,
   updateLastSlideTitle,
+  setDisCountDownLoad,
   removePresentation,
   removeLastSlide,
   getLastSlide,
@@ -195,16 +196,26 @@ bot.on("callback_query", async (ctx) => {
   let getPresintation = await seeSLides(userId);
   if (!getPresintation.success)
     return ctx.reply("❌ Возникла ошибка при получении презентации :(");
+  let countDown = await setCountDownLoad(userId);
+  let result = 10 - countDown.count.countDownLoad;
+  if (result <= 0) return ctx.reply("❌ Загрузки закончились :(");
   await ctx.reply("⚙️ Генерация...");
+
   let createPresentationOfUser = await createPresentation(
     getPresintation.presintation,
     Number(callbackData) - 1,
     userId
   );
-  if (!createPresentationOfUser.success) return ctx.reply("❌ Ошибка!");
-  let countDown = await setCountDownLoad(userId);
-  let result = 10 - countDown.count.countDownLoad;
-  if(result <= 0) return ctx.reply("Загрузки закончились :(")
+  if (!createPresentationOfUser.success) {
+    let decrement = await setDisCountDownLoad(userId);
+    console.log(
+      decrement.success
+        ? "Добавили попытку у "
+        : "Ошибка при добавлении попытки у ",
+      userId
+    );
+    return ctx.reply("❌ Ошибка!");
+  }
   await ctx.replyWithHTML(
     `📩 Отправка, не забудте поблагодарить <a href='https://t.me/O101O1O1O'>создателя!</a>\n<b>Осталось ${result} скачиваний</b>`
   );

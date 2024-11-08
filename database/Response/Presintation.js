@@ -1,6 +1,6 @@
-const Presintation = require("../Schema/Presintation");
 const PresentationSchema = require("../Schema/Presintation");
-
+const fs = require("fs");
+const path = require("path");
 let setTitle = async (userID, text) => {
   try {
     let setTitle = await PresentationSchema.updateOne(
@@ -89,8 +89,8 @@ async function removeBackgroundLastSlide(userID) {
     if (presintation.sliders.length > 0) {
       // Находим последний слайд и обновляем его title
       const lastSlideIndex = presintation.sliders.length - 1;
+      removePicture(presintation.sliders[lastSlideIndex].background);
       presintation.sliders[lastSlideIndex].background = null;
-
       // Сохраняем обновленный документ
       await presintation.save();
       return { success: true };
@@ -183,16 +183,43 @@ let setTextSlide = async (userID, text) => {
     return { success: false };
   }
 };
-
+function removePicture(title) {
+  return new Promise((resolve, reject) => {
+    const filePath = path.join(__dirname, "../../pictures", `${title}.jpg`);
+    fs.unlink(filePath, (err) => {
+      if (err) {
+        reject(err); // Передаем ошибку в catch
+      } else {
+        console.log(`${title}.jpg удален успешно`);
+        resolve(); // Успешное удаление
+      }
+    });
+  });
+}
 let removePresentation = async (userID) => {
   try {
-    let findAndRemove = await PresentationSchema.updateOne(
+    let findAndRemove = await PresentationSchema.findOneAndUpdate(
       { userID },
       { $set: { sliders: [], title: null } }
     );
-    return { success: true };
+
+    if (findAndRemove) {
+      for (const slide of findAndRemove.sliders) {
+        if (slide.background) {
+          try {
+            await removePicture(slide.background);
+          } catch (e) {
+            console.error(`Ошибка при удалении изображения: ${e}`);
+          }
+        }
+      }
+      return { success: true };
+    } else {
+      return { success: false, message: "Презентация не найдена" };
+    }
   } catch (e) {
-    return { success: false };
+    console.error(`Ошибка при удалении презентации: ${e}`);
+    return { success: false, message: "Ошибка при удалении презентации" };
   }
 };
 
@@ -228,6 +255,18 @@ let setCountDownLoad = async (userID) => {
     return { success: false, message: e };
   }
 };
+let setDisCountDownLoad = async (userID) => {
+  try {
+    let count = await PresentationSchema.findOneAndUpdate(
+      { userID },
+      { $inc: { countDownLoad: -1 } }
+    );
+    return { success: true, count };
+  } catch (e) {
+    console.error("Ошибка: ", e);
+    return { success: false, message: e };
+  }
+};
 let seeSLides = async (userID) => {
   try {
     let getSlides = await PresentationSchema.findOne({ userID });
@@ -246,6 +285,7 @@ module.exports = {
   setBackgroundSlide,
   seeSLides,
   removeBackgroundLastSlide,
+  setDisCountDownLoad,
   removePresentation,
   updateLastSlideTitle,
   setTextSlide,

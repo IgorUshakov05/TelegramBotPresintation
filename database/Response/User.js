@@ -6,7 +6,7 @@ let findUserByIdOrCreate = async (userID, firstName, chatID, isPremium) => {
     let find = await User.findOne({ userID });
     let findPresintation = await PresentationSchema.findOne({ userID });
     if (findPresintation) {
-      await PresentationSchema.deleteOne({ userID });
+      await PresentationSchema.updateOne({ userID }, {$set: {title: null, sliders: []}});
     }
     await PresentationSchema.create({ userID });
     if (!find) {
