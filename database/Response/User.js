@@ -6,9 +6,13 @@ let findUserByIdOrCreate = async (userID, firstName, chatID, isPremium) => {
     let find = await User.findOne({ userID });
     let findPresintation = await PresentationSchema.findOne({ userID });
     if (findPresintation) {
-      await PresentationSchema.updateOne({ userID }, {$set: {title: null, sliders: []}});
+      await PresentationSchema.updateOne(
+        { userID },
+        { $set: { title: null, sliders: [] } }
+      );
+    } else {
+      await PresentationSchema.create({ userID });
     }
-    await PresentationSchema.create({ userID });
     if (!find) {
       console.log("Новый пользователь!");
       console.log(isPremium);
@@ -21,4 +25,14 @@ let findUserByIdOrCreate = async (userID, firstName, chatID, isPremium) => {
   }
 };
 
-module.exports = { findUserByIdOrCreate };
+
+let getAllUsers = async () => {
+  try {
+    let users = await User.find({});
+    return { success: true, users };
+  } catch (e) {
+    console.log(e);
+    return { success: false };
+  }
+};
+module.exports = { findUserByIdOrCreate, getAllUsers };

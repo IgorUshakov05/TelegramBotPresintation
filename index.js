@@ -3,7 +3,10 @@ const { Telegraf, session, Markup } = require("telegraf");
 const { mongoose } = require("mongoose");
 const fs = require("fs");
 const axios = require("axios");
-const { findUserByIdOrCreate } = require("./database/Response/User");
+const {
+  findUserByIdOrCreate,
+  getAllUsers,
+} = require("./database/Response/User");
 const {
   setTitle,
   setTitleSlide,
@@ -33,28 +36,41 @@ bot.use((ctx, next) => {
 
 bot.command("start", async (ctx) => {
   try {
-    const chatID = ctx.from.id;
-    const firstName = ctx.from.first_name;
-    const isPremium = ctx.from.is_premium || false;
-    const userId = ctx.from.username;
+    const chatID = await ctx.from.id;
+    const firstName = await ctx.from.first_name;
+    const isPremium = (await ctx.from.is_premium) || false;
+    const userId = await ctx.from.username;
+    console.log(`Запуск от ${firstName}, ${userId}`)
     await findUserByIdOrCreate(userId, firstName, chatID, isPremium);
-    await ctx.reply(
-      `Привет, ${firstName}! 👋`,
-      Markup.keyboard([
-        ["📥 Скачать"], // первая строка клавиатуры
-        ["🗑️ Удалить презентацию"], // вторая строка клавиатуры
-        ["👁️ Просмотреть"],
-      ])
-        .resize() // подгоняет клавиатуру под размер кнопок
-        .oneTime()
-    );
-    await ctx.reply(`Бот на стадии разработки! Пошли вон`, {
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: "Начать!", callback_data: "get_title_pricentation" }],
-        ],
-      },
-    });
+    if (userId === "O101O1O1O") {
+      await ctx.reply(
+        `Привет, ${firstName}! 👋`,
+        Markup.keyboard([
+          ["👱 Режим смертного"], // вторая строка клавиатуры
+          ["👁️ Режим бога"],
+        ])
+          .resize() // подгоняет клавиатуру под размер кнопок
+          .oneTime()
+      );
+    } else {
+      await ctx.reply(
+        `Привет, ${firstName}! 👋`,
+        Markup.keyboard([
+          ["📥 Скачать"], // первая строка клавиатуры
+          ["🗑️ Удалить презентацию"], // вторая строка клавиатуры
+          ["👁️ Просмотреть"],
+        ])
+          .resize() // подгоняет клавиатуру под размер кнопок
+          .oneTime()
+      );
+      await ctx.reply(`Бот на стадии разработки! Пошли вон`, {
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "Начать!", callback_data: "get_title_pricentation" }],
+          ],
+        },
+      });
+    }
   } catch (e) {
     console.log(e);
   }
@@ -169,6 +185,29 @@ bot.action("set_background_slide", (ctx) => {
   ctx.answerCbQuery();
 });
 
+bot.action("getUserData", async (ctx) => {
+  if (ctx.from.username !== "O101O1O1O")
+    return ctx.reply("Слыш, у тебя прав нет!");
+  let getData = await getAllUsers();
+  getData.users.forEach(async (user) => {
+    await ctx.replyWithHTML(
+      `<a href="https://t.me/${user.userID}">${user.firstName}</a>${
+        user.isPremium ? " - 🪙" : ""
+      }`,
+      { disable_web_page_preview: true }
+    );
+  });
+  ctx.answerCbQuery();
+});
+
+bot.action("getContUser", async (ctx) => {
+  if (ctx.from.username !== "O101O1O1O")
+    return ctx.reply("Слыш, у тебя прав нет!");
+  let getData = await getAllUsers();
+  await ctx.replyWithHTML(`${getData.users.length} - активных пользователей!`);
+  ctx.answerCbQuery();
+});
+
 bot.action("reset_background_slide", (ctx) => {
   ctx.replyWithHTML("🖼️ Отправте фон слайда <i>(необязательно)</i>", {
     reply_markup: {
@@ -188,11 +227,31 @@ bot.action("reset_background_slide", (ctx) => {
   ctx.session.expecting = "reset_background_slide";
   ctx.answerCbQuery();
 });
+bot.action("sendAdd", async (ctx) => {
+  const userId = await ctx.from.username;
+
+  ctx.session.expecting = null; // Очищаем состояние
+});
+
+bot.action("cancel", (ctx) => {
+  ctx.reply("Отмена рассылки");
+  ctx.session.expecting = null;
+  ctx.answerCbQuery();
+});
+
+bot.action("add", (ctx) => {
+  ctx.reply("Напишите рекламный текст! Можно с картинкой", {
+    reply_markup: {
+      inline_keyboard: [[{ text: "❌ Отмена", callback_data: "cancel" }]],
+    },
+  });
+  ctx.session.expecting = "sendAdd";
+  ctx.answerCbQuery();
+});
 bot.on("callback_query", async (ctx) => {
   const callbackData = ctx.callbackQuery.data;
   const userId = await ctx.from.username;
   await ctx.answerCbQuery(`Вы выбрали тему: ${callbackData}`);
-  console.log(callbackData - 1);
   let getPresintation = await seeSLides(userId);
   if (!getPresintation.success)
     return ctx.reply("❌ Возникла ошибка при получении презентации :(");
@@ -240,6 +299,109 @@ bot.hears("🗑️ Удалить презентацию", async (ctx) => {
   });
   ctx.session.expecting = await null;
 });
+bot.hears("👱 Режим смертного", async (ctx) => {
+  await ctx.reply(
+    `Привет, повелитель! 👋`,
+    Markup.keyboard([
+      ["📥 Скачать"], // первая строка клавиатуры
+      ["🗑️ Удалить презентацию"], // вторая строка клавиатуры
+      ["👁️ Просмотреть"],
+    ])
+      .resize() // подгоняет клавиатуру под размер кнопок
+      .oneTime()
+  );
+  await ctx.reply("Введите название презентации");
+  ctx.session.expecting = await "slideName";
+});
+bot.hears("👁️ Режим бога", async (ctx) => {
+  const userId = await ctx.from.username;
+  const firstName = await ctx.from.first_name;
+
+  if (userId === "O101O1O1O") {
+    ctx.reply(`Госпадин, ${firstName}, что вам угодно?`, {
+      reply_markup: {
+        inline_keyboard: [
+          [
+            {
+              text: "👁️ Информация о пользователях",
+              callback_data: "getUserData",
+            },
+          ],
+          [
+            {
+              text: "➕ Добавить в черный список",
+              callback_data: "addBlackList",
+            },
+          ],
+          [
+            {
+              text: "1️⃣ Посмотреть количество пользователей",
+              callback_data: "getContUser",
+            },
+          ],
+          [
+            {
+              text: "📢 Реклама",
+              callback_data: "add",
+            },
+          ],
+        ],
+      },
+    });
+  } else {
+    await ctx.reply(
+      `Слыш, у тебя нет прав!`,
+      Markup.keyboard([
+        ["📥 Скачать"], // первая строка клавиатуры
+        ["🗑️ Удалить презентацию"], // вторая строка клавиатуры
+        ["👁️ Просмотреть"],
+      ])
+        .resize()
+        .oneTime()
+    );
+  }
+  ctx.session.expecting = await null;
+});
+
+async function addvenset(ctx, text, fileId) {
+  // Получаем chatId всех пользователей
+  let getChatID = await (await getAllUsers()).users.map((user) => user.chatID);
+
+  // Обрабатываем каждого пользователя
+  for (const chatId of getChatID) {
+    try {
+      if (fileId) {
+        // Отправляем фотографию
+        await ctx.telegram.sendPhoto(chatId, fileId, {
+          caption: text,
+          parse_mode: "HTML",
+        });
+      } else {
+        // Отправляем текстовое сообщение
+        await ctx.telegram.sendMessage(chatId, text, {
+          parse_mode: "HTML",
+        });
+      }
+    } catch (error) {
+      if (error.response && error.response.error_code === 403) {
+        // Если пользователь заблокировал бота
+        console.log(
+          `Пользователь с chat_id ${chatId} заблокировал бота. Пропускаем.`
+        );
+      } else {
+        // Логируем другие ошибки
+        console.error(
+          `Ошибка при отправке сообщения пользователю ${chatId}:`,
+          error
+        );
+      }
+    }
+  }
+
+  // После завершения рассылки выводим результат
+  console.log(`Рассылка прошла успешно на ${getChatID.length} пользователей!`);
+}
+
 bot.on("text", async (ctx) => {
   try {
     const userId = ctx.from.username;
@@ -306,7 +468,7 @@ bot.on("text", async (ctx) => {
       let getPresintation = await seeSLides(userId);
       if (!getPresintation.success)
         return ctx.reply("❌ Возникла ошибка при получении презентации :(");
-      if (!getPresintation.presintation.sliders.length)
+      if (!getPresintation?.presintation?.sliders.length)
         return ctx.reply("Презентация пустая!");
 
       await ctx.replyWithHTML(
@@ -314,7 +476,6 @@ bot.on("text", async (ctx) => {
       );
 
       for (const slide of getPresintation.presintation.sliders) {
-        console.log(slide.background);
         if (slide.background) {
           await ctx.replyWithPhoto(
             { source: `./pictures/${slide.background}.jpg` },
@@ -335,7 +496,7 @@ bot.on("text", async (ctx) => {
       }
       return;
     }
-    console.log(type);
+
     if (!type) {
       ctx.session.expecting = null;
       return ctx.reply("Сейчас чуть-чуть не пон, перезапусти меня /start");
@@ -464,6 +625,14 @@ bot.on("text", async (ctx) => {
           ],
         },
       });
+    } else if (type === "sendAdd") {
+      // Проверяем пользователя, прежде чем продолжать
+      if (userId !== "O101O1O1O") {
+        return ctx.reply("Ты кто вообще такой");
+      }
+      const text = ctx.message?.text;
+      await addvenset(ctx, text);
+      ctx.session.expecting = null;
     }
   } catch (e) {
     console.log(e);
@@ -474,7 +643,6 @@ bot.on("photo", async (ctx) => {
   try {
     const userId = ctx.from.username;
     let type = ctx.session.expecting;
-    console.log(type);
     if (!type) {
       ctx.session.expecting = null;
       return ctx.reply("Сейчас чуть-чуть не пон, перезапусти меня /start");
@@ -492,7 +660,6 @@ bot.on("photo", async (ctx) => {
       }
       // Получаем URL файла
       const fileUrl = await ctx.telegram.getFileLink(fileId);
-      console.log(fileUrl);
       // Загружаем изображение с помощью axios
       const response = await axios.get(fileUrl.href, {
         responseType: "arraybuffer",
@@ -504,7 +671,6 @@ bot.on("photo", async (ctx) => {
       await fs.writeFileSync(`./pictures/${fileId}.jpg`, buffer);
       ctx.session.expecting = null;
       let lastSlideInfo = await getLastSlide(userId);
-      console.log(lastSlideInfo);
       if (lastSlideInfo.data.background) {
         return ctx.replyWithPhoto(
           { url: fileUrl },
@@ -553,6 +719,19 @@ bot.on("photo", async (ctx) => {
           },
         }
       );
+    } else if (type === "sendAdd") {
+      // Проверяем пользователя, прежде чем продолжать
+      if (userId !== "O101O1O1O") {
+        return ctx.reply("Ты кто вообще такой");
+      }
+
+      // Если пользователь авторизован, обрабатываем сообщение
+      const photos = await ctx.message?.photo;
+      const text = await ctx.message?.caption;
+      console.log(ctx.message);
+      const fileId = await photos[photos.length - 1].file_id;
+      await addvenset(ctx, text, fileId);
+      ctx.session.expecting = null;
     }
   } catch (error) {
     console.error("Ошибка при получении изображения:", error);
