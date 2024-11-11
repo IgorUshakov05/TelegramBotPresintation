@@ -7,7 +7,6 @@ let setTitle = async (userID, text) => {
       { userID },
       { $set: { title: text } }
     );
-    console.log(setTitle);
     return { success: true };
   } catch (e) {
     console.log(e);
@@ -35,7 +34,6 @@ let setTitleSlide = async (userID, text) => {
       { $push: { sliders: { title: text } } }
     );
 
-    console.log(setTitle);
     return { success: true };
   } catch (e) {
     console.log(e);
@@ -48,7 +46,6 @@ async function updateLastSlideTitle(userID, newTitle) {
     const presintation = await PresentationSchema.findOne({ userID });
 
     if (!presintation) {
-      console.log("Презентация не найдена");
       return { success: false, message: "Презентация не найдена" };
     }
 
@@ -61,13 +58,9 @@ async function updateLastSlideTitle(userID, newTitle) {
       // Сохраняем обновленный документ
       await presintation.save();
 
-      console.log(
-        "Title последнего слайда обновлен:",
-        presintation.sliders[lastSlideIndex]
-      );
+     
       return { success: true };
     } else {
-      console.log("Нет слайдов для обновления");
       return { success: false, message: "Нет слайдов для изменения" };
     }
   } catch (error) {
@@ -81,7 +74,6 @@ async function removeBackgroundLastSlide(userID) {
     const presintation = await PresentationSchema.findOne({ userID });
 
     if (!presintation) {
-      console.log("Презентация не найдена");
       return { success: false, message: "Презентация не найдена" };
     }
 
@@ -108,7 +100,6 @@ async function updateLastSlideText(userID, newText) {
     const presintation = await PresentationSchema.findOne({ userID });
 
     if (!presintation) {
-      console.log("Презентация не найдена");
       return { success: false, message: "Презентация не найдена" };
     }
 
@@ -127,7 +118,6 @@ async function updateLastSlideText(userID, newText) {
       );
       return { success: true };
     } else {
-      console.log("Нет слайдов для обновления");
       return { success: false, message: "Нет слайдов для изменения" };
     }
   } catch (error) {
@@ -176,7 +166,6 @@ let setTextSlide = async (userID, text) => {
       }
     );
 
-    console.log(setText);
     return { success: setText.modifiedCount > 0 };
   } catch (e) {
     console.log(e);
@@ -190,7 +179,6 @@ function removePicture(title) {
       if (err) {
         reject(err); // Передаем ошибку в catch
       } else {
-        console.log(`${title}.jpg удален успешно`);
         resolve(); // Успешное удаление
       }
     });
@@ -228,7 +216,6 @@ let getLastSlide = async (userID) => {
     let findSlide = await PresentationSchema.findOne({ userID })
       .select("sliders")
       .slice("sliders", -1);
-    console.log(findSlide);
     return {
       success: true,
       data: {

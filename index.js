@@ -40,8 +40,17 @@ bot.command("start", async (ctx) => {
     const firstName = await ctx.from.first_name;
     const isPremium = (await ctx.from.is_premium) || false;
     const userId = await ctx.from.username;
-    console.log(`Запуск от ${firstName}, ${userId}`)
-    await findUserByIdOrCreate(userId, firstName, chatID, isPremium);
+    if (!userId) return await ctx.reply("Поставьте username в профиле!");
+    console.log(ctx.from);
+    console.log(`Запуск от ${firstName}, ${userId}`);
+    let create = await findUserByIdOrCreate(
+      userId,
+      firstName,
+      chatID,
+      isPremium,
+      ctx
+    );
+    if (!create.success) return await ctx.reply("Попробуй снова /start");
     if (userId === "O101O1O1O") {
       await ctx.reply(
         `Привет, ${firstName}! 👋`,
@@ -728,7 +737,6 @@ bot.on("photo", async (ctx) => {
       // Если пользователь авторизован, обрабатываем сообщение
       const photos = await ctx.message?.photo;
       const text = await ctx.message?.caption;
-      console.log(ctx.message);
       const fileId = await photos[photos.length - 1].file_id;
       await addvenset(ctx, text, fileId);
       ctx.session.expecting = null;

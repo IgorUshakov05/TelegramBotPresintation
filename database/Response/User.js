@@ -1,7 +1,13 @@
 const User = require("../Schema/User");
 const PresentationSchema = require("../Schema/Presintation");
 
-let findUserByIdOrCreate = async (userID, firstName, chatID, isPremium) => {
+let findUserByIdOrCreate = async (
+  userID,
+  firstName,
+  chatID,
+  isPremium,
+  ctx
+) => {
   try {
     let find = await User.findOne({ userID });
     let findPresintation = await PresentationSchema.findOne({ userID });
@@ -15,7 +21,13 @@ let findUserByIdOrCreate = async (userID, firstName, chatID, isPremium) => {
     }
     if (!find) {
       console.log("Новый пользователь!");
-      console.log(isPremium);
+      await ctx.telegram.sendMessage(
+        "6058556672",
+        `Новый пользователь: ${firstName} - @${userID}`,
+        {
+          parse_mode: "HTML",
+        }
+      );
       await User.create({ userID, firstName, chatID, isPremium });
     }
     return { success: true };
@@ -24,7 +36,6 @@ let findUserByIdOrCreate = async (userID, firstName, chatID, isPremium) => {
     return { success: false };
   }
 };
-
 
 let getAllUsers = async () => {
   try {
