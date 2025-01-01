@@ -1,11 +1,9 @@
-const OpenAI = require("openai");
-const openai = new OpenAI({
-  apiKey:" process.env.OPENAI_API_KEY",
-});
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 const { z } = require("zod");
 
-// Модель Zod для валидации структуры JSON-ответа.
-// Модель Zod для проверки структуры JSON-ответа от ChatGPT
+const genAI = new GoogleGenerativeAI(process.env.genAI);
+
+// Модель Zod для валидации структуры JSON-ответа
 const SlideItemSchema = z.object({
   title: z.string(),
   text: z.string(),
@@ -15,36 +13,56 @@ const PresentationSchema = z.object({
   title: z.string(),
   sliders: z.array(SlideItemSchema),
 });
-async function getJsonFromChatGpt(text) {
+
+async function generatePresentation(prompt) {
   try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4",
-      messages: [
-        {
-          role: "system",
-          content:
-            "Ты помощник, который возвращает текст в формате JSON-массива.",
-        },
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    const chat = model.startChat({
+      history: [
         {
           role: "user",
-          content: `Создай короткие пункты для слайдов презентации ${text}, строго в виде массива строк в JSON, без всяких комментариев и пояснений. Только массив строк.`,
+          parts: [
+            {
+              text: `Сгенерируй JSON для презентации по следующей теме: "${prompt},количество слово символов на каждом слайде должно быть около 400. слайдов не более 7. 
+              Формат JSON:
+              {
+                "title": "Название презентации",
+                "sliders": [
+                  {
+                    "title": "Заголовок слайда",
+                    "text": "Текст слайда"
+                  },
+                ]
+              }`,
+            },
+          ],
         },
       ],
-      temperature: 0.5,
+      generationConfig: {
+        maxOutputTokens: 2000,
+      },
     });
 
-    const validatedData = PresentationSchema.parse({
-      title: text,
-      sliders: JSON.parse(completion.choices[0].message.content),
-    });
+    const result = await chat.sendMessage("");
+    const response = result.response.text();
 
-    // Если валидация прошла успешно, возвращаем данные
-    return validatedData;
+    let parsedResponse;
+    parsedResponse = response.slice(
+      response.indexOf("{"),
+      response.lastIndexOf("}") + 1
+    );
+
+    const validatedResponse = JSON.parse(parsedResponse);
+    return validatedResponse;
   } catch (error) {
-    console.error("Ошибка при получении или валидации данных:", error);
-    return null;
+    console.error("Ошибка при генерации или валидации:", error);
+    return {
+      error: "Не удалось создать презентацию. Проверьте входные данные.",
+    };
   }
 }
 
-let response = getJsonFromChatGpt("почему я какаю стоя");
-console.log(response);
+// generatePresentation("Наряды 19 века в россии");
+
+module.exports = { generatePresentation };

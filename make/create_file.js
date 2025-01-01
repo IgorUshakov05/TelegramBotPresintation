@@ -44,6 +44,7 @@ let themes = [
 ];
 
 function createPresentation(slidesData, thema = 0, name) {
+  console.log(slidesData);
   // Создаем новую презентацию
   let pptx = new PptxGenJS();
 
@@ -67,7 +68,7 @@ function createPresentation(slidesData, thema = 0, name) {
     });
 
     titleSlide.addImage({
-      path: path.join(__dirname, "..", "pictures", "logo.jpg"),
+      path: path.join(__dirname, "..", "pictures", "logo.png"),
       x: "88%",
       y: "4%",
       w: 1,
