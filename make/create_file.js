@@ -44,12 +44,11 @@ let themes = [
 ];
 
 function createPresentation(slidesData, thema = 0, name) {
-  console.log(slidesData);
+  console.log(slidesData, " presentation");
   // Создаем новую презентацию
   let pptx = new PptxGenJS();
 
   try {
-    // Добавляем титульный слайд
     let titleSlide = pptx.addSlide();
     titleSlide.addShape(pptx.ShapeType.rect, {
       x: 0,
